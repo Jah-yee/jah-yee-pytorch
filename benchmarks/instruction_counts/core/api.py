@@ -174,7 +174,7 @@ class GroupedBenchmark:
         py_stmt: str | None = None,
         cpp_stmt: str | None = None,
         # Generic constructor arguments
-        setup: GroupedSetup = GroupedSetup(),
+        setup: GroupedSetup | None = None,
         signature: str | None = None,
         torchscript: bool = False,
         autograd: bool = False,
@@ -185,6 +185,8 @@ class GroupedBenchmark:
         This method of benchmark definition is analogous to Timer use, where
         we simply execute the provided stmts.
         """
+        if setup is None:
+            setup = GroupedSetup()
         if py_stmt is not None:
             py_stmt = textwrap.dedent(py_stmt)
 
@@ -222,7 +224,7 @@ class GroupedBenchmark:
         py_model_setup: str | None = None,
         cpp_model_setup: str | None = None,
         # Generic constructor arguments
-        setup: GroupedSetup = GroupedSetup(),
+        setup: GroupedSetup | None = None,
         signature: str | None = None,
         torchscript: bool = False,
         autograd: bool = False,
@@ -242,6 +244,9 @@ class GroupedBenchmark:
             raise ValueError(
                 "signature is needed when initializing from model definitions."
             )
+
+        if setup is None:
+            setup = GroupedSetup()
 
         return cls(
             *cls._make_model_invocation(

@@ -42,7 +42,9 @@ def _test_worker(test_func):
 
 
 def test_dense_dense_mm(x, y, **meta):
-    def test_func(x=x.to_dense(), y=y):
+    x = x.to_dense()
+
+    def test_func(x=x, y=y):
         return torch.matmul(x, y)
 
     return _test_worker(test_func)
@@ -116,7 +118,9 @@ def test_bsr_scatter_mm(x, y, **meta):
 def test_linear(x, y, **meta):
     import torch.nn.functional as F
 
-    def test_func(x=x, y=y.transpose(-2, -1)):
+    y = y.transpose(-2, -1)
+
+    def test_func(x=x, y=y):
         return F.linear(y, x)
 
     return _test_worker(test_func)
