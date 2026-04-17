@@ -399,7 +399,7 @@ class TracerBase:
         A method that lowers the objects seen as arguments during symbolic evaluation
         into Argument types that can be stored in IR.
 
-        Can be override to support more trace-specific types.
+        Can be overridden to support more trace-specific types.
         """
         # IMPORTANT: Are you here because you are trying to proxy a new type into
         # the graph? Please Please Please contact someone on the PyTorch Compiler team;
