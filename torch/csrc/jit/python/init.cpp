@@ -1709,7 +1709,7 @@ void initJITBindings(PyObject* module) {
       // Jump to the end of the buffer to get its size
       auto current = buffer.attr("tell")();
       start_offset_ = py::cast<size_t>(current);
-      buffer.attr("seek")(current, py::module::import("os").attr("SEEK_END"));
+      buffer.attr("seek")(0, py::module::import("os").attr("SEEK_END")); // Add SEEK_END reference
       size_ = py::cast<size_t>(buffer.attr("tell")()) - start_offset_;
       buffer.attr("seek")(current);
 
