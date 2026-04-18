@@ -1482,13 +1482,10 @@ Tensor nanmean(
   auto in_dtype = at::native::get_dtype_from_self(self, opt_dtype, true);
 
   if (!at::isFloatingType(in_dtype) && !at::isComplexType(in_dtype)) {
-    std::string what = "Input";
-    std::string dtype_str = toString(self.scalar_type());
-
-    if (opt_dtype.has_value()) {
-      what = "Optional";
-      dtype_str = toString(opt_dtype.value());
-    }
+    std::string what = opt_dtype.has_value() ? "Optional" : "Input";
+    std::string dtype_str = opt_dtype.has_value()
+        ? toString(opt_dtype.value())
+        : toString(self.scalar_type());
 
     TORCH_CHECK(
         false,
