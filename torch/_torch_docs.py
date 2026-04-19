@@ -13129,9 +13129,21 @@ Examples::
 add_docstr(
     torch.trapz,
     r"""
-trapz(y, x, *, dim=-1) -> Tensor
+trapz(y, x=None, *, dx=None, dim=-1) -> Tensor
 
 Alias for :func:`torch.trapezoid`.
+
+For more details, please read :func:`torch.trapezoid`.
+
+Arguments:
+    y (Tensor): Values to use when computing the trapezoidal rule.
+    x (Tensor): If specified, defines spacing between values as specified above.
+
+Keyword arguments:
+    dx (float): constant spacing between values. If neither :attr:`x` or :attr:`dx`
+        are specified then this defaults to 1. Effectively multiplies the result by its value.
+    dim (int): The dimension along which to compute the trapezoidal rule.
+        The last (inner-most) dimension by default.
 """,
 )
 
