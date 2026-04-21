@@ -1465,6 +1465,11 @@ Tensor& nanmean_out(
   TORCH_CHECK(
     !at::isIntegralType(self.scalar_type(), /*includeBool=*/true),
     "nanmean(): integral types and 'Bool' are not supported for nanmean, even for empty tensors.");
+  if (opt_dtype.has_value()) {
+    TORCH_CHECK(
+      !at::isIntegralType(*opt_dtype, /*includeBool=*/true),
+      "nanmean(): integral types and 'Bool' are not supported for nanmean output dtype.");
+  }
   TORCH_CHECK(
       self.is_floating_point() || self.is_complex(),
       "nanmean(): expected input to have floating point or complex dtype but got ",
@@ -1483,6 +1488,11 @@ Tensor nanmean(
       self.is_floating_point() || self.is_complex(),
       "nanmean(): expected input to have floating point or complex dtype but got ",
       self.scalar_type());
+  if (opt_dtype.has_value()) {
+    TORCH_CHECK(
+      !at::isIntegralType(*opt_dtype, /*includeBool=*/true),
+      "nanmean(): integral types and 'Bool' are not supported for nanmean output dtype.");
+  }
   const auto factor =
       at::native::isnan(self.detach()).logical_not_().sum(dim, keepdim);
   return at::nansum(self, dim, keepdim, opt_dtype).div(factor);
