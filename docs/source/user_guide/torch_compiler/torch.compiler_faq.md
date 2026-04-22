@@ -7,15 +7,15 @@
 `torch.compile` supports training, using AOTAutograd to capture backwards:
 
 1. The `.forward()` graph and `optimizer.step()` is captured by
-   TorchDynamo’s python `evalframe` frontend.
+   TorchDynamo's python `evalframe` frontend.
 2. For each segment of `.forward()` that torchdynamo captures, it uses
    AOTAutograd to generate a backward graph segment.
 3. Each pair of forward and backward graph are (optionally) min-cut
    partitioned to save the minimal state between forward and backward.
 4. The forward and backward pairs are wrapped in `autograd.function` modules.
-5. User code calling `.backward()` still triggers eager’s autograd engine,
+5. User code calling `.backward()` still triggers eager's autograd engine,
    which runs each *compiled backward* graph as if it were one op, also running
-   any non-compiled eager ops’ `.backward()` functions.
+   any non-compiled eager ops' `.backward()` functions.
 
 ## Do you support Distributed code?
 
@@ -25,7 +25,7 @@ Support for other distributed training libraries is being considered.
 The main reason why Distributed code is challenging with dynamo is
 because AOTAutograd unrolls both the forward and backward pass and
 provides 2 graphs for backends to optimize. This is a problem for
-distributed code because we’d like to ideally overlap communication
+distributed code because we'd like to ideally overlap communication
 operations with computations. Eager pytorch accomplishes this in
 different ways for DDP/FSDP- using autograd hooks, module hooks, and
 modifications/mutations of module states. In a naive application of
@@ -54,7 +54,7 @@ are local fusions. So in practice this approach may be sufficient.
 
 ## Do I still need to export whole graphs?
 
-For the vast majority of models you probably don’t and you can use
+For the vast majority of models you probably don't and you can use
 `torch.compile()` as is but there are a few situations where
 full graphs are necessary and you can can ensure a full graph by simply
 running `torch.compile(..., fullgraph=True)`. These situations include:
@@ -80,24 +80,24 @@ succeeded.
 
 1. `torch.compile(..., backend="eager")` which only runs TorchDynamo
    forward graph capture and then runs the captured graph with PyTorch.
-   If this fails then there’s an issue with TorchDynamo.
+   If this fails then there's an issue with TorchDynamo.
 2. `torch.compile(..., backend="aot_eager")`
    which runs TorchDynamo to capture a forward graph, and then AOTAutograd
    to trace the backward graph without any additional backend compiler
    steps. PyTorch eager will then be used to run the forward and backward
-   graphs. If this fails then there’s an issue with AOTAutograd.
+   graphs. If this fails then there's an issue with AOTAutograd.
 3. `torch.compile(..., backend="inductor")` which runs TorchDynamo to capture a
    forward graph, and then AOTAutograd to trace the backward graph with the
-   TorchInductor compiler. If this fails then there’s an issue with TorchInductor
+   TorchInductor compiler. If this fails then there's an issue with TorchInductor
 
 ## Why is compilation slow?
 
-- **Dynamo Compilation**– TorchDynamo has a builtin stats function for
+- **Dynamo Compilation**- TorchDynamo has a builtin stats function for
   collecting and displaying the time spent in each compilation phase.
   These stats can be accessed by calling `torch._dynamo.utils.compile_times()`
   after executing `torch._dynamo`. By default, this returns a string
   representation of the compile times spent in each TorchDynamo function by name.
-- **Inductor Compilation**– TorchInductor has a builtin stats and trace function
+- **Inductor Compilation**- TorchInductor has a builtin stats and trace function
   for displaying time spent in each compilation phase, output code, output
   graph visualization and IR dump. `env TORCH_COMPILE_DEBUG=1 python repro.py`.
   This is a debugging tool designed to make it easier to debug/understand the
@@ -159,9 +159,9 @@ Triton in addition offers speedups because of automatic memory
 coalescing, memory management and scheduling within each Streaming
 Multiprocessor and has been designed to handle tiled computations.
 
-However, regardless of the backend you use it’s best to use a benchmark
+However, regardless of the backend you use it's best to use a benchmark
 and see approach so try out the PyTorch profiler, visually inspect the
-generated kernels and try to see what’s going on for yourself.
+generated kernels and try to see what's going on for yourself.
 
 
 (torch.compiler_graph_breaks)=
@@ -169,8 +169,8 @@ generated kernels and try to see what’s going on for yourself.
 
 ### Graph Breaks
 
-The main reason you won’t see the speedups you’d like to by using dynamo
-is excessive graph breaks. So what’s a graph break?
+The main reason you won't see the speedups you'd like to by using dynamo
+is excessive graph breaks. So what's a graph break?
 
 Given a program like:
 
@@ -191,7 +191,7 @@ into a C extension other than PyTorch is invisible to TorchDynamo, and
 could do arbitrary things without TorchDynamo being able to introduce
 necessary guards to ensure that the compiled program would be safe to reuse.
 
-> To maximize performance, it’s important to have as few graph breaks
+> To maximize performance, it's important to have as few graph breaks
 > as possible.
 ### Identifying the cause of a graph break
 
@@ -233,7 +233,7 @@ Out Guards:
 
 To throw an error on the first graph break encountered you can
 disable python fallbacks by using `fullgraph=True`, this should be
-familiar if you’ve worked with export based compilers.
+familiar if you've worked with export based compilers.
 
 ```python
 def toy_example(a, b):
@@ -242,16 +242,17 @@ def toy_example(a, b):
 torch.compile(toy_example, fullgraph=True, backend=<compiler>)(a, b)
 ```
 
-### Why didn’t my code recompile when I changed it?
+### Why didn't my code recompile when I changed it?
 
-If you enabled dynamic shapes by setting
-`env TORCHDYNAMO_DYNAMIC_SHAPES=1 python model.py` then your code
-won’t recompile on shape changes. We’ve added support for dynamic shapes
-which avoids recompilations in the case when shapes vary by less than a
-factor of 2. This is especially useful in scenarios like varying image
-sizes in CV or variable sequence length in NLP. In inference scenarios
-it’s often not possible to know what a batch size will be beforehand
-because you take what you can get from different client apps.
+If you enabled dynamic shapes via `torch.compile(dynamic=True)`, your code
+won't recompile on shape changes. For more details on dynamic shapes, see the
+[dynamic shapes documentation](https://pytorch.org/docs/main/torch.compiler_dynamic_shapes.html).
+Automatic dynamic is enabled by default in `torch.compile`, which avoids
+recompilations when shapes vary by less than a factor of 2, and is especially
+useful in scenarios like varying image sizes in CV or variable sequence length
+in NLP. In inference scenarios it's often not possible to know what a batch
+size will be beforehand because you take what you can get from different client
+apps.
 
 In general, TorchDynamo tries very hard not to recompile things
 unnecessarily so if for example TorchDynamo finds 3 graphs and your
@@ -267,7 +268,7 @@ Accuracy issues can also be minified if you set the environment variable
 `TORCHDYNAMO_REPRO_LEVEL=4`, it operates with a similar git bisect
 model and a full repro might be something like
 `TORCHDYNAMO_REPRO_AFTER="aot" TORCHDYNAMO_REPRO_LEVEL=4` the reason
-we need this is downstream compilers will codegen code whether it’s
+we need this is downstream compilers will codegen code whether it's
 Triton code or the C++ backend, the numerics from those downstream
 compilers can be different in subtle ways yet have dramatic impact on
 your training stability. So the accuracy debugger is very useful for us
@@ -278,13 +279,14 @@ and triton then you can enable `torch._inductor.config.fallback_random = True`
 
 ## Why am I getting OOMs?
 
-Dynamo is still an alpha product so there’s a few sources of OOMs and if
-you’re seeing an OOM try disabling the following configurations in this
+Dynamo is still an alpha product so there's a few sources of OOMs and if
+you're seeing an OOM try disabling the following configurations in this
 order and then open an issue on GitHub so we can solve the root problem
-1\. If you’re using dynamic shapes try disabling them, we’ve disabled
-them by default: `env TORCHDYNAMO_DYNAMIC_SHAPES=0 python model.py` 2.
-CUDA graphs with Triton are enabled by default in inductor but removing
-them may alleviate some OOM issues: `torch._inductor.config.triton.cudagraphs = False`.
+1\. If you are using `torch.compile(dynamic=True)`, consider removing `dynamic=True`
+   (automatic dynamic is the default).  For more details, see the
+   [dynamic shapes documentation](https://pytorch.org/docs/main/torch.compiler_dynamic_shapes.html).
+2\. CUDA graphs with Triton are enabled by default in inductor but removing
+   them may alleviate some OOM issues: `torch._inductor.config.triton.cudagraphs = False`.
 
 ## Does `torch.func` work with `torch.compile` (for `grad` and `vmap` transforms)?
 
@@ -598,8 +600,8 @@ most common use cases you might want to consider:
 Some of the uncommon use cases include:
 
 - If you want to disable TorchDynamo on the function frame but enable it back
-  on the recursively invoked frames – use `torch._dynamo.disable(recursive=False)`.
-- If you want to prevent inlining of a function frame – use `torch._dynamo.graph_break`
+  on the recursively invoked frames - use `torch._dynamo.disable(recursive=False)`.
+- If you want to prevent inlining of a function frame - use `torch._dynamo.graph_break`
   at the beginning of the function you want to prevent inlining.
 
 ### What's the difference between `torch._dynamo.disable` and `torch._dynamo.disallow_in_graph`
