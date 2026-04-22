@@ -964,6 +964,17 @@ class CachingAutotuner(KernelInterface):
             # reset to zero before evaluating any config
             self.reset_to_zero_args(*args, **kwargs)
             kernel_name = self.inductor_meta.get("kernel_name", "triton kernel")
+            # Validate argument count before launching to give a clear error message
+            sig = self.triton_meta.get("signature", {})
+            expected_arg_names = list(sig.keys())
+            actual_arg_count = len(cloned_args) + len(cloned_kwargs)
+            expected_arg_count = len(expected_arg_names)
+            if actual_arg_count != expected_arg_count:
+                raise ValueError(
+                    f"Wrong number of arguments for Triton kernel {kernel_name}: "
+                    f"expected {expected_arg_count}, got {actual_arg_count}. "
+                    f"The kernel signature is: {expected_arg_names}"
+                )
             if autograd_profiler._is_profiler_enabled:
                 profiler_kwargs = self.get_profiler_kwargs(stream, launcher)
                 with torch._C._profiler._RecordFunctionFast(
