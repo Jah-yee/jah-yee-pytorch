@@ -129,8 +129,11 @@ Tensor trapezoid(const Tensor& y, const Scalar& dx, int64_t dim) {
     return do_trapezoid(y, dx.toDouble(), dim);
 }
 
-Tensor trapz(const Tensor& y, const Tensor& x, int64_t dim) {
-    return at::native::trapezoid(y, x, dim);
+Tensor trapz(const Tensor& y, const OptionalTensorRef& x, int64_t dim) {
+    if (!x) {
+        return at::native::trapezoid(y, 1.0, dim);
+    }
+    return at::native::trapezoid(y, x.value(), dim);
 }
 
 Tensor trapz(const Tensor& y, double dx, int64_t dim) {
