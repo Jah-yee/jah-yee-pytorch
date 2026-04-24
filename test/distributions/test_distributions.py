@@ -1821,26 +1821,30 @@ class TestDistributions(DistributionsTestCase):
 
     def test_torch_binomial_dtype_errors(self):
         dtypes = [torch.int, torch.long, torch.short]
+        devices = ["cpu"]
+        if TEST_CUDA:
+            devices.append("cuda")
 
-        for count_dtype in dtypes:
-            total_count = torch.tensor([10, 10], dtype=count_dtype)
-            total_prob = torch.tensor([0.5, 0.5], dtype=torch.float)
+        for device in devices:
+            for count_dtype in dtypes:
+                total_count = torch.tensor([10, 10], dtype=count_dtype, device=device)
+                total_prob = torch.tensor([0.5, 0.5], dtype=torch.float, device=device)
 
-            with self.assertRaisesRegex(
-                ValueError,
-                "binomial only supports floating-point dtypes for count.*",
-            ):
-                torch.binomial(total_count, total_prob)
+                with self.assertRaisesRegex(
+                    ValueError,
+                    "binomial only supports floating-point dtypes for count.*",
+                ):
+                    torch.binomial(total_count, total_prob)
 
-        for prob_dtype in dtypes:
-            total_count = torch.tensor([10, 10], dtype=torch.float)
-            total_prob = torch.tensor([0.5, 0.5], dtype=prob_dtype)
+            for prob_dtype in dtypes:
+                total_count = torch.tensor([10, 10], dtype=torch.float, device=device)
+                total_prob = torch.tensor([0.5, 0.5], dtype=prob_dtype, device=device)
 
-            with self.assertRaisesRegex(
-                ValueError,
-                "binomial only supports floating-point dtypes for prob.*",
-            ):
-                torch.binomial(total_count, total_prob)
+                with self.assertRaisesRegex(
+                    ValueError,
+                    "binomial only supports floating-point dtypes for prob.*",
+                ):
+                    torch.binomial(total_count, total_prob)
 
     @set_default_dtype(torch.double)
     def test_multinomial_1d(self):
@@ -3412,14 +3416,15 @@ class TestDistributions(DistributionsTestCase):
             self.assertEqual((1.0 / lambd), mean, atol=2e-2, rtol=2e-2)
             self.assertEqual((1.0 / lambd) ** 2, var, atol=2e-2, rtol=2e-2)
 
+        set_rng_seed(2)  # see Note [Randomized statistical tests]
         for dtype in [torch.float, torch.double, torch.bfloat16, torch.float16]:
             for lambd in [0.2, 0.5, 1.0, 1.5, 2.0, 5.0]:
-                sample_len = 50000
+                sample_len = 50_000
                 mean_var(lambd, torch.rand(sample_len, dtype=dtype))
 
     @unittest.skipIf(not TEST_NUMPY, "NumPy not found")
     def test_exponential_sample(self):
-        set_rng_seed(1)  # see Note [Randomized statistical tests]
+        set_rng_seed(2)  # see Note [Randomized statistical tests]
         for rate in [1e-5, 1.0, 10.0]:
             self._check_sampler_sampler(
                 Exponential(rate),
@@ -3579,7 +3584,7 @@ class TestDistributions(DistributionsTestCase):
 
     @unittest.skipIf(not TEST_NUMPY, "NumPy not found")
     def test_pareto_sample(self):
-        set_rng_seed(1)  # see Note [Randomized statistical tests]
+        set_rng_seed(3)  # see Note [Randomized statistical tests]
         for scale, alpha in product([0.1, 1.0, 5.0], [0.1, 1.0, 10.0]):
             self._check_sampler_sampler(
                 Pareto(scale, alpha),
@@ -4805,7 +4810,7 @@ class TestRsample(DistributionsTestCase):
                         "expected_grad: %.5g" % expected_grad,  # noqa: UP031
                         "actual_grad: %.5g" % actual_grad,  # noqa: UP031
                         "error = %.2g"  # noqa: UP031
-                        % torch.abs(expected_grad - actual_grad).max(),  # noqa: UP031
+                        % torch.abs(expected_grad - actual_grad).max(),
                     ]
                 ),
             )
@@ -4889,7 +4894,7 @@ class TestDistributionShapes(DistributionsTestCase):
                     expected_shape = (
                         dist.batch_shape if dist.batch_shape else torch.Size()
                     )
-                    message = f"{Dist.__name__} example {i + 1}/{len(params)}, shape mismatch. expected {expected_shape}, actual {actual_shape}"  # noqa: B950
+                    message = f"{Dist.__name__} example {i + 1}/{len(params)}, shape mismatch. expected {expected_shape}, actual {actual_shape}"
                     self.assertEqual(actual_shape, expected_shape, msg=message)
                 except NotImplementedError:
                     continue
@@ -7055,6 +7060,7 @@ class TestJit(DistributionsTestCase):
             )
 
     def test_variance(self):
+        set_rng_seed(3)  # see Note [Randomized statistical tests]
         for Dist, keys, values, sample in self._examples():
             if Dist in [Cauchy, HalfCauchy]:
                 continue  # infinite variance
